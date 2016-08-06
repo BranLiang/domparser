@@ -1,4 +1,9 @@
-Tag = Struct.new :type, :classes, :id, :name, :title, :src
+Tag = Struct.new :type, :classes, :id, :name, :title, :src, :children, :parent do
+  def initialize(*)
+    super
+    self.children = []
+  end
+end
 
 ID_PATTERN   = /id\s?=\s?['|"]([^'"]*)['|"]/
 TYPE_PATTERN = /<\s?([^>\s]*)/
