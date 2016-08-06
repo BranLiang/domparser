@@ -19,14 +19,25 @@ describe DOMReader do
       # expect(result.children[1].tag).to eq('</html>')
       # expect(result.children[0].children[0].tag).to eq('<head>')
       # expect(result.children[0].children[1].tag).to eq('</head>')
-      expect(result.children[0].children[2].children[0].tag).to eq('<div class="top-div">')
+      expect(result.children[0].children[2].children[0].tag).to eq('<div class="top-div test test2">')
       # expect(result.children[0].children[3].tag).to eq('</body>')
     end
 
     it 'set proper tag attributes' do
       result = new_dom.parser_script file_path
-      attribute_value = result.children[0].children[2].attributes[:class]
-      expect(attribute_value).to eq(['one', 'two', 'three'])
+      expect(result.children[0].children[2].children[0].attributes[:class]).to eq(["top-div", 'test', 'test2'])
+    end
+
+    it 'set proper text' do
+      result = new_dom.parser_script file_path
+      expect(result.children[0].children[0].children[0].children[0].tag).to eq('This is a test page')
+    end
+  end
+
+  context '#print_parser' do
+    it 'print_parser' do
+      result = new_dom.parser_script file_path
+      new_dom.print_parser result
     end
   end
 

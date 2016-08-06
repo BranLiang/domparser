@@ -11,7 +11,7 @@ class DOMReader
   TAG_OPEN  = /<(\w+)[^>]*>/
   TAG_CLOSE = /<\/(\w+)[^>]*>/
   TAG_ATTR  = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/
-  TAG_TEXT  = />([^<>]*)</
+  TAG_TEXT  = />([^<>]*[\w\d]+[^<>]*)</
 
   def initialize
     @stack = []
@@ -37,6 +37,15 @@ class DOMReader
     end
     # puts @root
     @root
+  end
+
+  # Recursively print all the tags in the data structure.
+  def print_parser data
+    puts data.tag
+    return if data.children.empty?
+    data.children.each do |child|
+      print_parser child
+    end
   end
 
 
@@ -78,11 +87,35 @@ class DOMReader
   # For the open tag
   # Setup the parent-child connection with last element in stack
   def process_opentag node
+    add_text node
     @stack.last.children << node
     node.parent = @stack.last
     add_attributes node
     add_to_stack node
     increment_index node
+  end
+
+  # If find a close tag, the last element in the stack must be a match to it.
+  # So we pop the last element in the stack.
+  # Then setup the relationship with the new last element in the stack.
+  def process_closetag node
+    add_text node
+    @stack.pop
+    @stack.last.children << node
+    node.parent = @stack.last
+    increment_index node
+  end
+
+  # Text added to its immediate upper tag. Its is also set as a Node.
+  # With its content stored in the :tag attribute.
+  def add_text node
+    text_match = @html[(@index - 1)..(@index + node.index + 1)].match(TAG_TEXT)
+    unless text_match.nil?
+      text = text_match[1].strip
+      t_node = Node.new(text)
+      @stack.last.children << t_node
+      t_node.parent = @stack.last
+    end
   end
 
   def add_attributes node
@@ -91,22 +124,29 @@ class DOMReader
     attributes = tag_string.scan(TAG_ATTR) # Here I use the scan instead of match to get all attributes
     unless attributes.nil?
       attributes.each do |attribute|
-        name = attribute[0]
-        value = attribute[1]
-        node.attributes[name] = value
+        if attribute[0] == "class"
+          set_class_attr attribute, node
+        else
+          set_normal_attr attribute, node
+        end
       end
     end
   end
 
-  # If find a close tag, the last element in the stack must be a match to it.
-  # So we pop the last element in the stack.
-  # Then setup the relationship with the new last element in the stack.
-  def process_closetag node
-    @stack.pop
-    @stack.last.children << node
-    node.parent = @stack.last
-    increment_index node
+  def set_class_attr attribute, node
+    node.attributes[:class] = []
+    classes = attribute[1]
+    classes.split(" ").each do |one_class|
+      node.attributes[:class] << one_class.strip
+    end
   end
+
+  def set_normal_attr attribute, node
+    name = attribute[0].to_sym # transform it to symbol
+    value = attribute[1]
+    node.attributes[name] = value
+  end
+
 
   # Small helper methods
   def add_to_stack node
