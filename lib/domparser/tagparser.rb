@@ -1,4 +1,4 @@
-Tag = Struct.new :type, :classes, :id, :name, :title, :src, :children, :parent do
+Tag = Struct.new :type, :classes, :id, :name, :title, :src, :children, :parent, :next_sibling do
   def initialize(*)
     super
     self.children = []
