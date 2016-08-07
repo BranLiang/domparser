@@ -74,7 +74,7 @@ Domparser.rebuild data
 ```
 
 After that, you will a html like structure as follows.
-
+![rebuild](https://github.com/BranLiang/domparser/blob/master/img/Screenshot%20from%202016-08-07%2014-58-06.png)
 
 
 
