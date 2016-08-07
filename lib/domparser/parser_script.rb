@@ -26,7 +26,7 @@ class DOMReader
     @stack = []
     @html = nil
     @index = 0
-    @root = Node.new('DOCUMENT')
+    @root = Node.new('DOCUMENT', nil, 'general', 0)
     @tag_count = 0
   end
 
@@ -54,6 +54,7 @@ class DOMReader
     end
   end
 
+  private
 
   # Function: Get the next tag, index property will change for each run.
   # Get the <Matchdata: ...>
@@ -85,31 +86,23 @@ class DOMReader
 
   # For special tag, add its previews text and setup relationship, add its type
   # and attributes
+
+
   def process_special node
     add_text node
-    @stack.last.children << node unless @stack.empty?
-    node.parent = @stack.last unless @stack.empty?
+    setup_relation node
     add_tag_type node
     add_attributes node
     increment_index node
     @tag_count += 1
   end
 
-  def add_tag_type node
-    node.type = node.tag.match(TAG_OPEN)[1]
-  end
 
   # For the open tag
   # Setup the parent-child connection with last element in stack
   def process_opentag node
-    add_text node
-    @stack.last.children << node unless @stack.empty?
-    node.parent = @stack.last unless @stack.empty?
-    add_tag_type node
-    add_attributes node
+    process_special node
     add_to_stack node
-    increment_index node
-    @tag_count += 1 # The tag_count is only for determination of the loop end
   end
 
   # If find a close tag, the last element in the stack must be a match to it.
@@ -119,8 +112,7 @@ class DOMReader
   def process_closetag node
     add_text node
     @stack.pop
-    @stack.last.children << node unless @stack.empty?
-    node.parent = @stack.last
+    setup_relation node
     increment_index node
   end
 
@@ -129,23 +121,16 @@ class DOMReader
     unless text_match.nil?
       text = text_match[1].strip
       t_node = Node.new(text, nil, 'text')
-      @stack.last.children << t_node
-      t_node.parent = @stack.last
+      setup_relation t_node
       @tag_count += 1
     end
   end
 
   def add_attributes node
-    tag_string = node.tag
-    tag_length = tag_string.length
-    attributes = tag_string.scan(TAG_ATTR) # Here I use the scan instead of match to get all attributes
+    attributes = node.tag.scan(TAG_ATTR) # Here I use the scan instead of match to get all attributes
     unless attributes.nil?
       attributes.each do |attribute|
-        if attribute[0] == "class"
-          set_class_attr attribute, node
-        else
-          set_normal_attr attribute, node
-        end
+        attribute[0] == "class" ? set_class_attr(attribute, node) : set_normal_attr(attribute, node)
       end
     end
   end
@@ -166,6 +151,15 @@ class DOMReader
 
 
   # Small helper methods
+  def setup_relation node
+    @stack.last.children << node
+    node.parent = @stack.last
+  end
+
+  def add_tag_type node
+    node.type = node.tag.match(TAG_OPEN)[1].to_sym
+  end
+
   def add_to_stack node
     @stack << node
   end

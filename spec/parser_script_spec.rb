@@ -1,8 +1,9 @@
-require 'domparser/parser_script'
+require 'spec_helper'
 
 describe DOMReader do
   let(:html_string){ File.read('lib/domparser/test.html').gsub("\n", "") }
   let(:file_path){ 'lib/domparser/test.html' }
+  let(:file_path2){ 'lib/domparser/test2.html' }
   let(:new_dom){ DOMReader.new }
 
   context '#parser_script' do
@@ -28,6 +29,11 @@ describe DOMReader do
       result = new_dom.parser_script file_path
       new_dom.simple_print_parser result
     end
+
+    # it 'simple_print_parser for test2' do
+    #   result = new_dom.parser_script file_path2
+    #   new_dom.simple_print_parser result
+    # end
   end
 
 
