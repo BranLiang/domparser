@@ -9,8 +9,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ["BranLiang"]
   spec.email         = ["lby89757@hotmail.com"]
 
-  spec.summary       = %q{DOM parser .}
-  spec.description   = %q{DOM parser .}
+  spec.summary       = %q{Simple dom parser whihc translate html into tree data structure.}
+  spec.description   = %q{There are three main function of this gem read html, search data, rebuild html.}
   spec.homepage      = "http://liangboyuan.pub"
   spec.license       = "MIT"
 
