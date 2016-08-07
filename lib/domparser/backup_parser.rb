@@ -1,4 +1,4 @@
-Node = Struct.new :tag, :offset, :type, :attributes, :children, :parent do
+Node = Struct.new :tag, :index, :attributes, :children, :parent do
   def initialize(*)
     super
     self.attributes = {}
@@ -7,63 +7,57 @@ Node = Struct.new :tag, :offset, :type, :attributes, :children, :parent do
 end
 
 class DOMReader
-  attr_accessor :root, :tag_count
-
-  TAG_COMMON = /<[\/]*(\w+)[^>]*>/  # Include both open and close tag conditions, <!doctype> is exclude here.
+  TAG_COMMON = /<[^>]*>/
   TAG_OPEN  = /<(\w+)[^>]*>/
   TAG_CLOSE = /<\/(\w+)[^>]*>/
   TAG_ATTR  = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/
   TAG_TEXT  = />([^<>]*[\w\d]+[^<>]*)</
-  TAG_SPECIAL = /(<img[^>]*>|<hr[^>]*>|<area[^>]*>|<base[^>]*>|<br[^>]*>|<col[^>]*>|<embed[^>]*>|<input[^>]*>|<link[^>]*>|<meta[^>]*>|<source[^>]*>|<param[^>]*>|<command[^>]*>|<track[^>]*>|<keygen[^>]*>|<wbr[^>]*>)/
 
-  # @Stack is only used to store open tag. Because only opentags can have children
-  # @Stack will be initialized with the DOCUMENT node
-  # @html is used to store html
-  # @index is used to store tag offset
-  # @root is the tag tree
-  # @tag_count counts the opentag + specialtag + texttag
   def initialize
     @stack = []
     @html = nil
     @index = 0
-    @root = Node.new('DOCUMENT')
+    @num_nodes = 1
+    @root = nil
     @tag_count = 0
   end
 
-  # Get new node, do proper process depends on its type, weather its opentag,
-  # close tag or special tag.
-  # Break the loop if the stack has one element left
   def parser_script file_path
     read_file file_path
-    @stack << @root # initialize the @stack
     loop do
       cur_node = get_new_tag @html, @index
+      # Point the root to the very first node.
+      # The root property will change as the node grows.
+      @root = cur_node if @root.nil?
+      # Main purpose of the processing is to add connections between nodes
+      # And increment the @index with each run
       processing cur_node
-      break if @stack.length == 1
+      break if @stack.empty?
+      break if doctype?(@stack.last) && @tag_count > 1
     end
+    # puts @root
     @root
   end
 
   # Recursively print all the tags in the data structure.
-  # Simple cheat print, only use the tag in the data structure.
-  def simple_print_parser data
+  def print_parser data
     puts data.tag
     return if data.children.empty?
     data.children.each do |child|
-      simple_print_parser child
+      print_parser child
     end
   end
 
 
   # Function: Get the next tag, index property will change for each run.
-  # Get the <Matchdata: ...>
-  # If find the match, get the string form from the original Matchdata
-  # Get the offset of the position of the tag(beginning)
-  # Create the new node of the tag
   def get_new_tag html_string, index
+    # Get the <Matchdata: ...>
     new_tag = html_string[index..-1].match(TAG_COMMON)
+    # If find the match, get the string form from the original Matchdata
     new_tag = new_tag[0] unless new_tag.nil?
+    # Get the offset of the position of the tag(beginning)
     tag_offset = html_string[index..-1] =~ TAG_COMMON
+    # Create the new node of the tag
     new_node = Node.new(new_tag, tag_offset)
   end
 
@@ -72,10 +66,10 @@ class DOMReader
     @html = File.read(file_path).gsub("\n", "")
   end
 
-  # Seperate process the open_tag, close_tag and special tag
+  # Seperate process the doctype, open_tag, and close_tag
   def processing node
-    if special? node
-      process_special node
+    if doctype? node
+      process_doctype node
     elsif opentag? node
       process_opentag node
     else
@@ -83,29 +77,18 @@ class DOMReader
     end
   end
 
-  # For special tag, add its previews text and setup relationship, add its type
-  # and attributes
-  def process_special node
-    add_text node
-    @stack.last.children << node unless @stack.empty?
-    node.parent = @stack.last unless @stack.empty?
-    add_tag_type node
-    add_attributes node
+  # For the doctype, just put it into the stack
+  def process_doctype node
+    add_to_stack node
     increment_index node
-    @tag_count += 1
-  end
-
-  def add_tag_type node
-    node.type = node.tag.match(TAG_OPEN)[1]
   end
 
   # For the open tag
   # Setup the parent-child connection with last element in stack
   def process_opentag node
     add_text node
-    @stack.last.children << node unless @stack.empty?
-    node.parent = @stack.last unless @stack.empty?
-    add_tag_type node
+    @stack.last.children << node
+    node.parent = @stack.last
     add_attributes node
     add_to_stack node
     increment_index node
@@ -115,23 +98,23 @@ class DOMReader
   # If find a close tag, the last element in the stack must be a match to it.
   # So we pop the last element in the stack.
   # Then setup the relationship with the new last element in the stack.
-  # The add text step must be done before the @stack.pop so the text is connected to the previews open tag
   def process_closetag node
     add_text node
     @stack.pop
-    @stack.last.children << node unless @stack.empty?
+    @stack.last.children << node
     node.parent = @stack.last
     increment_index node
   end
 
+  # Text added to its immediate upper tag. Its is also set as a Node.
+  # With its content stored in the :tag attribute.
   def add_text node
-    text_match = @html[(@index - 1)..(@index + node.offset + 1)].match(TAG_TEXT)
+    text_match = @html[(@index - 1)..(@index + node.index + 1)].match(TAG_TEXT)
     unless text_match.nil?
       text = text_match[1].strip
-      t_node = Node.new(text, nil, 'text')
+      t_node = Node.new(text)
       @stack.last.children << t_node
       t_node.parent = @stack.last
-      @tag_count += 1
     end
   end
 
@@ -171,15 +154,15 @@ class DOMReader
   end
 
   def increment_index node
-    @index += node.tag.length + node.offset
+    @index += node.tag.length + node.index
+  end
+
+  def doctype? node
+    node.tag == '<!doctype html>'
   end
 
   def opentag? node
     !!node.tag.match(TAG_OPEN)
-  end
-
-  def special? node
-    !!node.tag.match(TAG_SPECIAL)
   end
 
 end
