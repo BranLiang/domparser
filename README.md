@@ -44,7 +44,36 @@ Or install it yourself as:
     $ gem install domparser
 
 ## Usage
+After installation.
 
+In the command shell.
+
+```
+require "domparser"
+```
+
+then locate your html file path, type the following command
+
+```
+Domparser.parser "desktop/test/index.html"
+```
+
+You will get a return from the previews command which is the new data structure. which looks like the following.
+![data_structure](https://github.com/BranLiang/domparser/blob/master/img/Screenshot%20from%202016-08-07%2014-49-36.png)
+
+You can also search a particular attribute, here the data is the data tree you generated. A example is as follows.
+
+```
+Domparser.search data, :class, 'container'
+```
+
+If you want to rebuild the html file. Just use the rebuild function as follows.
+
+```
+Domparser.rebuild data
+```
+
+After that, you will a html like structure as follows.
 
 
 
