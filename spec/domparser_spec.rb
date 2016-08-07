@@ -1,11 +1,17 @@
 require 'spec_helper'
 
 describe Domparser do
-  it 'has a version number' do
-    expect(Domparser::VERSION).not_to be nil
+  let(:file_path){ 'lib/domparser/test.html' }
+  let(:tree){ DOMReader.new.parser_script file_path }
+  let(:new_tree){ NodeRenderer.new(tree) }
+  context '#domparser' do
+    it 'output all the tree nicely' do
+      Domparser.parser file_path
+    end
+
+    it 'rebuild data' do
+      Domparser.rebuild tree
+    end
   end
 
-  # it 'does something useful' do
-  #   expect(false).to eq(true)
-  # end
 end

@@ -1,4 +1,4 @@
-Node = Struct.new :tag, :offset, :type, :attributes, :children, :parent do
+Node = Struct.new :tag, :offset,:type, :depth, :attributes, :children, :parent do
   def initialize(*)
     super
     self.attributes = {}
@@ -41,18 +41,49 @@ class DOMReader
       processing cur_node
       break if @stack.length == 1
     end
+    puts @root
     @root
   end
 
   # Recursively print all the tags in the data structure.
   # Simple cheat print, only use the tag in the data structure.
+  # def simple_print_parser data
+  #   puts data.tag
+  #   return if data.children.empty?
+  #   data.children.each do |child|
+  #     print " " * child.depth
+  #     simple_print_parser child
+  #   end
+  # end
+
   def simple_print_parser data
-    puts data.tag
+    if data.type.nil?
+      puts data.tag
+    elsif data.attributes.empty?
+      puts "<#{data.type}>"
+    else
+      string = ""
+      data.attributes.each do |key, value|
+        if key == :class
+          string << key.to_s << "='"
+          value.each do |class_value|
+            string << class_value << " "
+          end
+          string << "' "
+        else
+          string << key.to_s << "=" << "'" << value << "'" << " "
+        end
+      end
+      puts "<#{data.type} #{string.strip}>"
+    end
     return if data.children.empty?
     data.children.each do |child|
+      print " " * child.depth
       simple_print_parser child
     end
   end
+
+
 
   private
 
@@ -95,6 +126,7 @@ class DOMReader
     add_attributes node
     increment_index node
     @tag_count += 1
+    increment_depth node
   end
 
 
@@ -114,6 +146,7 @@ class DOMReader
     @stack.pop
     setup_relation node
     increment_index node
+    increment_depth node
   end
 
   def add_text node
@@ -122,6 +155,7 @@ class DOMReader
       text = text_match[1].strip
       t_node = Node.new(text, nil, 'text')
       setup_relation t_node
+      increment_depth t_node
       @tag_count += 1
     end
   end
@@ -151,6 +185,10 @@ class DOMReader
 
 
   # Small helper methods
+  def increment_depth node
+    node.depth = node.parent.depth + 2
+  end
+
   def setup_relation node
     @stack.last.children << node
     node.parent = @stack.last
