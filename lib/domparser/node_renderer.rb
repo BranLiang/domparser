@@ -7,13 +7,28 @@ class NodeRenderer
 
   def render node = nil
     if node.nil?
-      @general_hash = Hash.new(0)
-      @type_hash = Hash.new(0)
-      detail_print_all @tree
-      general_print_all @tree
-      print_general_hash @general_hash
-      detail_print_hash @type_hash
+      print_all
+    else
+      print_node node
     end
+  end
+
+  def print_node  node
+    @general_hash = Hash.new(0)
+    @type_hash = Hash.new(0)
+    detail_print_all node
+    general_print_all node
+    print_general_hash @general_hash
+    detail_print_hash @type_hash
+  end
+
+  def print_all
+    @general_hash = Hash.new(0)
+    @type_hash = Hash.new(0)
+    detail_print_all @tree
+    general_print_all @tree
+    print_general_hash @general_hash
+    detail_print_hash @type_hash
   end
 
   def general_print_all data
