@@ -41,7 +41,7 @@ class DOMReader
       processing cur_node
       break if @stack.length == 1
     end
-    puts @root
+    # puts @root
     @root
   end
 
